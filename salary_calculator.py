@@ -4,7 +4,9 @@
 """
 
 import sys
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+from database import TMCDatabase
+from tmc_manager import select_items_for_calculation
 
 # ==================== КОНСТАНТЫ 2026 ====================
 MRP = 4325  # Месячный расчетный показатель
@@ -341,8 +343,21 @@ def security_calculator_interactive():
         markup_input = input(f"Наценка/маржа (%, default={DEFAULT_MARKUP_PERCENT}): ").strip()
         markup = float(markup_input) if markup_input else DEFAULT_MARKUP_PERCENT
         
-        additional_input = input("Доп. расходы в месяц (форма, оборудование, ₸, default=0): ").strip()
-        additional = float(additional_input.replace(',', '').replace(' ', '')) if additional_input else 0
+        # Выбор ТМЦ из базы данных
+        additional = 0.0
+        
+        use_tmc = input("\nИспользовать ТМЦ из базы данных? (y/n, default=n): ").strip().lower()
+        if use_tmc in ['y', 'yes', 'да', 'д']:
+            with TMCDatabase() as db:
+                selected_items = select_items_for_calculation(db)
+                if selected_items:
+                    tmc_monthly_cost = sum(item['monthly_cost'] for item in selected_items)
+                    additional = tmc_monthly_cost
+                    print(f"\n✅ Добавлена стоимость ТМЦ: {tmc_monthly_cost:,.2f} ₸/мес")
+        else:
+            # Дополнительные расходы (если не используем ТМЦ)
+            additional_input = input("Доп. расходы в месяц (форма, оборудование, ₸, default=0): ").strip()
+            additional = float(additional_input.replace(',', '').replace(' ', '')) if additional_input else 0
         
         print("\n🔄 Расчет...")
         
@@ -378,5 +393,29 @@ def security_calculator_interactive():
         print(f"❌ Ошибка: {e}")
 
 
+def main_menu():
+    """Главное меню программы."""
+    while True:
+        print("\n" + "=" * 80)
+        print("КАЛЬКУЛЯТОР СТОИМОСТИ ОХРАННЫХ УСЛУГ - КАЗАХСТАН 2026")
+        print("=" * 80)
+        print("\n1. Расчет стоимости охраны")
+        print("2. Управление ТМЦ (товарно-материальные ценности)")
+        print("q. Выход")
+        
+        choice = input("\nВаш выбор: ").strip().lower()
+        
+        if choice == '1':
+            security_calculator_interactive()
+        elif choice == '2':
+            from tmc_manager import tmc_menu
+            tmc_menu()
+        elif choice == 'q':
+            print("\n👋 До свидания!")
+            break
+        else:
+            print("❌ Неверный выбор. Попробуйте снова.")
+
+
 if __name__ == "__main__":
-    security_calculator_interactive()
+    main_menu()
