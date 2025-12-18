@@ -35,10 +35,11 @@ function addPost() {
     const postCard = document.createElement('div');
     postCard.className = 'post-card';
     postCard.id = `post-${postCounter}`;
+    postCard.dataset.postId = postCounter;
     
     postCard.innerHTML = `
         <div class="post-header">
-            <h3>Пост №${postCounter}</h3>
+            <h3 class="post-title">Пост №${postCounter}</h3>
             <button class="btn btn-danger" onclick="removePost(${postCounter})">🗑️ Удалить</button>
         </div>
         
@@ -67,7 +68,20 @@ function removePost(postId) {
     const post = document.getElementById(`post-${postId}`);
     if (post) {
         post.remove();
+        renumberPosts(); // Перенумеровываем посты после удаления
     }
+}
+
+// Перенумерация постов
+function renumberPosts() {
+    const postElements = document.querySelectorAll('.post-card');
+    postElements.forEach((postEl, index) => {
+        const newNumber = index + 1;
+        const titleElement = postEl.querySelector('.post-title');
+        if (titleElement) {
+            titleElement.textContent = `Пост №${newNumber}`;
+        }
+    });
 }
 
 // Добавление группы персонала
@@ -177,7 +191,7 @@ async function calculate() {
             
             if (staff.length > 0) {
                 posts.push({
-                    post_number: parseInt(postId),
+                    post_number: index + 1, // Используем индекс для правильной нумерации
                     hours_per_day: hours,
                     days_per_week: days,
                     staff
