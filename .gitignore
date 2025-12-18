@@ -39,3 +39,6 @@ Thumbs.db
 # Project specific
 *.txt
 !requirements.txt
+
+# Database
+*.db
