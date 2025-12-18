@@ -1,5 +1,4 @@
 // Глобальные переменные
-let postCounter = 0;
 let tmcItems = [];
 
 // Инициализация
@@ -8,8 +7,13 @@ document.addEventListener('DOMContentLoaded', () => {
     addPost(); // Добавляем первый пост по умолчанию
 });
 
+// Получить текущее количество постов
+function getPostCount() {
+    return document.querySelectorAll('.post-card').length;
+}
+
 // Переключение вкладок
-function showTab(tabName) {
+function showTab(tabName, element) {
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
     });
@@ -18,7 +22,9 @@ function showTab(tabName) {
     });
     
     document.getElementById(`${tabName}-tab`).classList.add('active');
-    event.target.classList.add('active');
+    if (element) {
+        element.classList.add('active');
+    }
     
     if (tabName === 'tmc') {
         loadTMCList();
@@ -29,43 +35,43 @@ function showTab(tabName) {
 
 // Добавление поста
 function addPost() {
-    postCounter++;
     const container = document.getElementById('posts-container');
+    const postNumber = getPostCount() + 1;
+    const uniqueId = Date.now(); // Уникальный ID для элементов
     
     const postCard = document.createElement('div');
     postCard.className = 'post-card';
-    postCard.id = `post-${postCounter}`;
-    postCard.dataset.postId = postCounter;
+    postCard.dataset.uniqueId = uniqueId;
     
     postCard.innerHTML = `
         <div class="post-header">
-            <h3 class="post-title">Пост №${postCounter}</h3>
-            <button class="btn btn-danger" onclick="removePost(${postCounter})">🗑️ Удалить</button>
+            <h3 class="post-title">Пост №${postNumber}</h3>
+            <button class="btn btn-danger" onclick="removePost(${uniqueId})">🗑️ Удалить</button>
         </div>
         
         <div class="form-grid">
             <div class="form-group">
                 <label>Часов в день:</label>
-                <input type="number" id="hours-${postCounter}" min="1" max="24" value="12">
+                <input type="number" class="hours-input" min="1" max="24" value="12">
             </div>
             <div class="form-group">
                 <label>Дней в неделю:</label>
-                <input type="number" id="days-${postCounter}" min="1" max="7" value="7">
+                <input type="number" class="days-input" min="1" max="7" value="7">
             </div>
         </div>
         
         <h4>Персонал:</h4>
-        <div id="staff-${postCounter}"></div>
-        <button class="btn btn-secondary" onclick="addStaff(${postCounter})">➕ Добавить группу персонала</button>
+        <div class="staff-container"></div>
+        <button class="btn btn-secondary" onclick="addStaff(${uniqueId})">➕ Добавить группу персонала</button>
     `;
     
     container.appendChild(postCard);
-    addStaff(postCounter); // Добавляем первую группу персонала
+    addStaff(uniqueId); // Добавляем первую группу персонала
 }
 
 // Удаление поста
-function removePost(postId) {
-    const post = document.getElementById(`post-${postId}`);
+function removePost(uniqueId) {
+    const post = document.querySelector(`[data-unique-id="${uniqueId}"]`);
     if (post) {
         post.remove();
         renumberPosts(); // Перенумеровываем посты после удаления
@@ -85,36 +91,33 @@ function renumberPosts() {
 }
 
 // Добавление группы персонала
-let staffCounter = {};
-function addStaff(postId) {
-    if (!staffCounter[postId]) {
-        staffCounter[postId] = 0;
-    }
-    staffCounter[postId]++;
+function addStaff(postUniqueId) {
+    const post = document.querySelector(`[data-unique-id="${postUniqueId}"]`);
+    if (!post) return;
     
-    const container = document.getElementById(`staff-${postId}`);
-    const staffId = `staff-${postId}-${staffCounter[postId]}`;
+    const container = post.querySelector('.staff-container');
+    const staffUniqueId = Date.now() + Math.random();
     
     const staffGroup = document.createElement('div');
     staffGroup.className = 'staff-group';
-    staffGroup.id = staffId;
+    staffGroup.dataset.staffId = staffUniqueId;
     
     staffGroup.innerHTML = `
         <div class="form-grid">
             <div class="form-group">
                 <label>Должность:</label>
-                <input type="text" id="${staffId}-position" placeholder="Охранник дневной">
+                <input type="text" class="position-input" placeholder="Охранник дневной">
             </div>
             <div class="form-group">
                 <label>Количество:</label>
-                <input type="number" id="${staffId}-count" min="1" value="1">
+                <input type="number" class="count-input" min="1" value="1">
             </div>
             <div class="form-group">
                 <label>ЗП на руки (₸):</label>
-                <input type="number" id="${staffId}-salary" min="0" placeholder="150000">
+                <input type="number" class="salary-input" min="0" placeholder="150000">
             </div>
             <div class="form-group">
-                <button class="btn btn-danger" onclick="removeStaff('${staffId}')">🗑️</button>
+                <button class="btn btn-danger" onclick="removeStaff(${staffUniqueId})">🗑️</button>
             </div>
         </div>
     `;
@@ -123,8 +126,8 @@ function addStaff(postId) {
 }
 
 // Удаление группы персонала
-function removeStaff(staffId) {
-    const staff = document.getElementById(staffId);
+function removeStaff(staffUniqueId) {
+    const staff = document.querySelector(`[data-staff-id="${staffUniqueId}"]`);
     if (staff) {
         staff.remove();
     }
@@ -170,19 +173,17 @@ async function calculate() {
         const postElements = document.querySelectorAll('.post-card');
         
         postElements.forEach((postEl, index) => {
-            const postId = postEl.id.split('-')[1];
-            const hours = parseInt(document.getElementById(`hours-${postId}`).value);
-            const days = parseInt(document.getElementById(`days-${postId}`).value);
+            const hours = parseInt(postEl.querySelector('.hours-input').value);
+            const days = parseInt(postEl.querySelector('.days-input').value);
             
             // Собираем персонал
             const staff = [];
             const staffElements = postEl.querySelectorAll('.staff-group');
             
             staffElements.forEach(staffEl => {
-                const staffId = staffEl.id;
-                const position = document.getElementById(`${staffId}-position`).value;
-                const count = parseInt(document.getElementById(`${staffId}-count`).value);
-                const salary = parseFloat(document.getElementById(`${staffId}-salary`).value);
+                const position = staffEl.querySelector('.position-input').value;
+                const count = parseInt(staffEl.querySelector('.count-input').value);
+                const salary = parseFloat(staffEl.querySelector('.salary-input').value);
                 
                 if (position && count && salary) {
                     staff.push({ position, count, net_salary: salary });
